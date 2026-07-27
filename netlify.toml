@@ -4,6 +4,12 @@
 
 [functions]
   included_files = ["eng.traineddata", "eng.traineddata.gz"]
+  external_node_modules = [
+    "@tensorflow/tfjs",
+    "upscaler",
+    "@upscalerjs/default-model",
+    "playwright-core"
+  ]
 
 [[redirects]]
   from = "/api/*"

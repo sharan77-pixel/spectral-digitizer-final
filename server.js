@@ -45,14 +45,16 @@ const staticOptions = {
 };
 
 app.use(express.static(path.join(__dirname, 'public'), staticOptions));
-// Serve browser builds of npm packages directly
-app.use('/vendor/tf', express.static(path.join(__dirname, 'node_modules/@tensorflow/tfjs/dist'), staticOptions));
-app.use('/vendor/upscaler', express.static(path.join(__dirname, 'node_modules/upscaler/dist/browser/umd'), staticOptions));
-app.use('/vendor/default-model', express.static(path.join(__dirname, 'node_modules/@upscalerjs/default-model/dist/umd'), staticOptions));
-app.use('/vendor/tesseract', express.static(path.join(__dirname, 'node_modules/tesseract.js/dist'), staticOptions));
-app.use('/vendor/tesseract-core', express.static(path.join(__dirname, 'node_modules/tesseract.js-core'), staticOptions));
-app.use('/vendor/tesseract-lang', express.static(__dirname, staticOptions));
-app.use('/models', express.static(path.join(__dirname, 'node_modules/@upscalerjs/default-model/models'), staticOptions));
+// Serve browser builds of npm packages directly (only locally; Netlify serves them as static assets directly from the CDN)
+if (!process.env.NETLIFY) {
+  app.use('/vendor/tf', express.static(path.join(__dirname, 'node_modules/@tensorflow/tfjs/dist'), staticOptions));
+  app.use('/vendor/upscaler', express.static(path.join(__dirname, 'node_modules/upscaler/dist/browser/umd'), staticOptions));
+  app.use('/vendor/default-model', express.static(path.join(__dirname, 'node_modules/@upscalerjs/default-model/dist/umd'), staticOptions));
+  app.use('/vendor/tesseract', express.static(path.join(__dirname, 'node_modules/tesseract.js/dist'), staticOptions));
+  app.use('/vendor/tesseract-core', express.static(path.join(__dirname, 'node_modules/tesseract.js-core'), staticOptions));
+  app.use('/vendor/tesseract-lang', express.static(__dirname, staticOptions));
+  app.use('/models', express.static(path.join(__dirname, 'node_modules/@upscalerjs/default-model/models'), staticOptions));
+}
 
 
 
