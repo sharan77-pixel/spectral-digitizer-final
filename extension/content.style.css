@@ -1,0 +1,67 @@
+/* Floating toolbar injected on Google Images page */
+#spectral-extension-toolbar {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999999;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 2px solid #4285F4;
+    border-radius: 16px;
+    padding: 14px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#spectral-extension-toolbar .brand-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#spectral-extension-toolbar .badge-count {
+    background: #4285F4;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#spectral-extension-toolbar button {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    transition: all 0.2s ease;
+}
+
+#spectral-extension-toolbar button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+#spectral-extension-toolbar button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Image selection outline on Google Images */
+.spectral-selected-img {
+    outline: 4px solid #10B981 !important;
+    outline-offset: -2px !important;
+    position: relative !important;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6) !important;
+}

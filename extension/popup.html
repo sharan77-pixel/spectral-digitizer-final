@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spectral AI — Imageye Extractor</title>
+    <style>
+        body {
+            width: 300px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 16px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+        .header h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            color: #38bdf8;
+        }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            background: #1e293b;
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+        .btn-action {
+            width: 100%;
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 9px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .btn-action:hover {
+            background: #2563eb;
+        }
+        .btn-purple {
+            background: #8b5cf6;
+        }
+        .btn-purple:hover {
+            background: #7c3aed;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span>👁️</span>
+        <h3>Spectral AI Imageye Extractor</h3>
+    </div>
+    <div class="status-badge">
+        <span class="status-dot"></span>
+        <span>Connected: localhost:3000</span>
+    </div>
+    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px;">
+        Automatically extract, score, and send spectrum graph images on the active web page to your Spectral AI System.
+    </p>
+
+    <button class="btn-action btn-purple" id="btn-auto-extract-page">⚡ Auto-Extract & Send Spectra</button>
+    <button class="btn-action" id="btn-open-google">🔍 Search Google Images</button>
+    <button class="btn-action" id="btn-open-pubmed" style="background: #059669;">📚 Search PubMed Literature</button>
+
+    <script src="popup.js"></script>
+</body>
+</html>

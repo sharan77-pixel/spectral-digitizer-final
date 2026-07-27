@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectral AI System</title>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Plotly.js Local -->
+    <script src="/vendor/plotly.min.js"></script>
+
+    <!-- 2. TensorFlow.js — AI backend for UpscalerJS -->
+    <script defer src="/vendor/tf/tf.min.js"></script>
+    <!-- 3. Default Model for UpscalerJS -->
+    <script defer src="/vendor/default-model/index.min.js"></script>
+    <!-- 4. UpscalerJS — AI Super-Resolution Image Upscaling -->
+    <script defer src="/vendor/upscaler/upscaler.min.js"></script>
+    <!-- 5. Tesseract.js — Client-side OCR for axis tick labels -->
+    <script defer src="/vendor/tesseract/tesseract.min.js"></script>
+    <!-- PDF.js Client-side parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🔬 Digitizer Setup</h2>
+                <button id="btn-theme-toggle" class="theme-toggle-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Light/Dark Theme">
+                    <span class="theme-icon" id="theme-icon">☀️</span>
+                </button>
+            </div>
+            <!-- AI Engine Status Panel -->
+            <div id="ai-status-panel" style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid var(--border);">
+                <span id="ai-badge-opencv"    class="ai-badge ai-badge--loading">🔬 PureJS Engine ...⧖</span>
+                <span id="ai-badge-tesseract" class="ai-badge ai-badge--loading">📝 Tesseract.js ...⧖</span>
+                <span id="ai-badge-tensorflow" class="ai-badge ai-badge--loading">🧠 TensorFlow.js ...⧖</span>
+                <span id="ai-badge-upscaler"  class="ai-badge ai-badge--loading">🔭 UpscalerJS ...⧖</span>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>3. SET AXIS VALUES</h3>
+                <div class="button-row">
+                    <button id="btn-autodetect">Auto-detect</button>
+                    <button id="btn-editrange">Edit Range</button>
+                </div>
+                <button id="btn-calibrate-mode" class="blue-btn">📍 Calibrate by Clicks</button>
+                
+                <div id="range-editor" class="editor-fields">
+                    <div class="range-row">
+                        <label>X Min:<input type="text" id="input-x-min" value="300"></label>
+                        <label>X Max:<input type="text" id="input-x-max" value="550"></label>
+                    </div>
+                    <div class="range-row">
+                        <label>Y Min:<input type="text" id="input-y-min" value="0"></label>
+                        <label>Y Max:<input type="text" id="input-y-max" value="1"></label>
+                    </div>
+                    <div class="range-row">
+                        <label>X Scale:
+                            <select id="select-x-scale">
+                                <option value="linear" selected>Linear</option>
+                                <option value="log">Logarithmic</option>
+                            </select>
+                        </label>
+                        <label>Y Scale:
+                            <select id="select-y-scale">
+                                <option value="linear" selected>Linear</option>
+                                <option value="log">Logarithmic</option>
+                            </select>
+                        </label>
+                    </div>
+                    <span class="range-hint">✏️ Edit if OCR values are wrong. Supports 10^3, 1e-4 etc.</span>
+                </div>
+                <div id="range-display" class="metric-info" style="display:none">
+                    <strong>X Range:</strong> <span id="lbl-x-range">300.00 to 550.00</span><br/>
+                    <strong>Y Range:</strong> <span id="lbl-y-range">0.00 to 1.00</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>4. EXTRACTION CONFIG</h3>
+                <div class="form-group inline-radio">
+                    <label>Mode:</label>
+                    <label><input type="radio" name="extraction-mode" value="Multi" checked> Multi</label>
+                    <label><input type="radio" name="extraction-mode" value="Single"> Single</label>
+                </div>
+                
+                <div class="form-group">
+                    <label>Smoothing Window: <span id="val-smoothing">5</span></label>
+                    <input type="range" id="slider-smoothing" min="1" max="51" step="2" value="5">
+                </div>
+                
+                <div class="form-group">
+                    <label>Whiteness Threshold: <span id="val-whiteness">220</span></label>
+                    <input type="range" id="slider-whiteness" min="100" max="255" value="220">
+                </div>
+                
+                <div class="form-group">
+                    <label>Color Extraction Channel:</label>
+                    <select id="select-color-mode">
+                        <option value="grayscale" selected>Auto (all colors)</option>
+                        <option value="red">Red</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="orange">Orange</option>
+                        <option value="cyan">Cyan</option>
+                        <option value="magenta">Magenta</option>
+                        <option value="black">Black / Dark</option>
+                    </select>
+                </div>
+                
+                <button id="btn-extract-curves" class="green-btn" disabled>⚡ Extract Curves</button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>5. SAVE & EXPORT</h3>
+                <button id="btn-next-image" class="blue-btn">➡️ Next Image</button>
+                <div class="button-row" style="margin-top: 10px;">
+                    <button id="btn-download-csv" disabled>CSV 📄</button>
+                    <button id="btn-download-json" disabled>JSON 📝</button>
+                </div>
+            </div>
+            
+            <div class="collected-count-panel">
+                Collected curves: <strong id="collected-curves-count">0</strong>
+            </div>
+            
+            <!-- WIZARD STEPPER -->
+            <div class="wizard-stepper" id="wizard-stepper">
+                <div class="step active" data-step="1" id="step-node-1">
+                    <span class="step-num">1</span>
+                    <span class="step-lbl">Choose Mode</span>
+                </div>
+                <div class="step-divider"></div>
+                <div class="step" data-step="2" id="step-node-2">
+                    <span class="step-num">2</span>
+                    <span class="step-lbl">Search / Upload</span>
+                </div>
+                <div class="step-divider"></div>
+                <div class="step" data-step="3" id="step-node-3">
+                    <span class="step-num">3</span>
+                    <span class="step-lbl">Process Image</span>
+                </div>
+                <div class="step-divider"></div>
+                <div class="step" data-step="4" id="step-node-4">
+                    <span class="step-num">4</span>
+                    <span class="step-lbl">Collected Results</span>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            
+            <!-- TAB PANELS -->
+            <div class="tab-panels-container">
+                
+                <!-- STEP 1: HOME SPLASH PANEL -->
+                <div id="tab-home" class="tab-panel active">
+                    <div class="welcome-container">
+                        <div class="welcome-hero">
+                            <h1 class="welcome-title">🔬 SPECTRAL DATA ACQUISITION PLATFORM</h1>
+                            <p class="welcome-subtitle">Extract, digitize, and average chemical absorbance curves automatically or semi-manually.</p>
+                        </div>
+                        <div class="mode-cards-grid">
+                            <div class="mode-card" id="card-auto-mode">
+                                <div class="mode-card-icon">🤖</div>
+                                <h3 class="mode-card-title">Automatic Search Mode</h3>
+                                <p class="mode-card-description">Search for chemical names, automatically retrieve spectrum graphs from the web, and digitize them in batches.</p>
+                                <button class="mode-card-btn blue-btn">Launch Automatic Mode</button>
+                            </div>
+                            <div class="mode-card" id="card-manual-mode">
+                                <div class="mode-card-icon">📂</div>
+                                <h3 class="mode-card-title">Semi-Manual Upload Mode</h3>
+                                <p class="mode-card-description">Upload your own spectral graph files (JPG, PNG, PDF), manually calibrate axes coordinates, and trace customized curves.</p>
+                                <button class="mode-card-btn blue-btn">Launch Semi-Manual Mode</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: IMPORT PANEL -->
+                <div id="tab-import" class="tab-panel">
+                    <!-- AUTOMATIC SEARCH VIEW -->
+                    <div class="search-module-card hidden" id="import-auto-container">
+                        <!-- CHROME EXTENSION INTEGRATION BANNER -->
+                        <div class="extension-banner">
+                            <div class="ext-banner-info">
+                                <span class="ext-banner-icon">🧩</span>
+                                <div>
+                                    <strong class="ext-banner-title">Chrome Extension Helper (Imageye-Style Workflow)</strong>
+                                    <p class="ext-banner-sub">Open Google Images, click spectrum graph thumbnails, and push them live into this analysis app.</p>
+                                </div>
+                            </div>
+                            <div class="ext-banner-actions">
+                                <button type="button" id="btn-open-google-ext" class="secondary-btn">🌐 Open Google Images Search</button>
+                                <span id="ext-status-badge" class="ai-badge ai-badge--ready">🔌 Extension Listening</span>
+                            </div>
+                        </div>
+
+                        <!-- Imageye Automated Bulk Extractor Feature Banner (Automated Mode Only) -->
+                        <div class="imageye-auto-banner" style="margin-top: 14px; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15)); border: 1px solid #8B5CF6; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.4rem;">👁️</span>
+                                <div>
+                                    <strong style="color: #A78BFA; font-size: 0.9rem; display: block;">Imageye Automated Spectrum Extractor Active</strong>
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">Deep web scraper filters relevant spectrum graphs and pre-evaluates quality via SIQA.</span>
+                                </div>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: #A78BFA;">
+                                <input type="checkbox" id="chk-imageye-auto-mode" checked style="accent-color: #8B5CF6;">
+                                <span>Auto SIQA Pre-filter</span>
+                            </label>
+                        </div>
+
+                        <div class="google-search-header">
+                            <h3 class="google-brand-title"><span class="g-blue">G</span><span class="g-red">o</span><span class="g-yellow">o</span><span class="g-blue">g</span><span class="g-green">l</span><span class="g-red">e</span> Image Search <span class="badge-spectra">Spectra AI</span></h3>
+                            <p class="google-search-subtitle">Search chemical absorbance spectra, drag & drop images for Google Lens matching, or use voice search.</p>
+                        </div>
+                        
+                        <!-- GOOGLE SEARCH BAR CONTAINER -->
+                        <div class="google-search-bar-wrapper">
+                            <div class="google-search-bar" id="google-search-bar">
+                                <!-- Search Icon / Google G -->
+                                <div class="google-search-icon" id="google-search-icon">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill="#4285F4" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                    </svg>
+                                </div>
+                                
+                                <!-- Attached Image Preview Tag (Google Lens Style) -->
+                                <div id="attached-image-tag" class="attached-image-tag hidden">
+                                    <img id="attached-image-thumb" src="" alt="Thumbnail">
+                                    <span class="attached-image-name" id="attached-image-name">image.png</span>
+                                    <button type="button" class="btn-remove-attached" id="btn-remove-attached" title="Remove attached image">✕</button>
+                                </div>
+
+                                <!-- Main Input Field -->
+                                <input type="text" id="input-chemical-search" autocomplete="off" placeholder="Search chemical spectrum e.g. crystal violet, caffeine, beta carotene..." aria-label="Search Chemical Spectrum">
+                                
+                                <!-- Clear Text Button -->
+                                <button type="button" class="google-action-btn btn-clear-search hidden" id="btn-clear-search" title="Clear text">✕</button>
+                                
+                                <!-- Google Voice Search Mic Icon -->
+                                <button type="button" class="google-action-btn btn-voice-search" id="btn-voice-search" title="Search by voice">
+                                    <svg viewBox="0 0 24 24" width="20" height="20">
+                                        <path fill="#4285F4" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                        <path fill="#34A853" d="M11 18.92V21h2v-2.08c3.39-.49 6-3.4 6-6.92h-2c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.52 2.61 6.43 6 6.92z"/>
+                                        <path fill="#FBBC05" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" opacity="0.3"/>
+                                        <path fill="#EA4335" d="M12 14c.46 0 .89-.11 1.28-.3l-2.56-2.56c-.44-.14-.72-.55-.72-1.01V5c0-.55.45-1 1-1s1 .45 1 1v2.17l2.83 2.83C14.89 9.38 15 8.7 15 8V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                    </svg>
+                                </button>
+
+                                <!-- Google Lens / Camera Icon -->
+                                <button type="button" class="google-action-btn btn-lens-search" id="btn-lens-search" title="Search by image (Google Lens)">
+                                    <svg viewBox="0 0 24 24" width="22" height="22">
+                                        <path fill="#4285F4" d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
+                                        <path fill="#34A853" d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                                    </svg>
+                                </button>
+
+                                <!-- Google Submit Button -->
+                                <button type="button" id="btn-search-images" class="google-submit-btn">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                    <span>Search</span>
+                                </button>
+                            </div>
+
+                            <!-- Autocomplete Suggestions Dropdown -->
+                            <div class="google-suggestions-dropdown hidden" id="google-suggestions-dropdown">
+                                <!-- Dynamic chemical suggestions -->
+                            </div>
+                        </div>
+
+                        <!-- USER SEARCH PREFERENCES ROW -->
+                        <div class="user-preferences-row" style="display: flex; gap: 12px; align-items: center; justify-content: flex-start; margin-top: 14px; padding: 10px 14px; background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 10px; flex-wrap: wrap;">
+                            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-color);">⚙️ User Preferences:</span>
+                            
+                            <label style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                                <span>Technique:</span>
+                                <select id="select-pref-type" style="padding: 4px 8px; border-radius: 6px; background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color); font-size: 0.8rem;">
+                                    <option value="uv-vis" selected>UV-Vis Absorbance</option>
+                                    <option value="ftir">FTIR / InfraRed</option>
+                                    <option value="fluorescence">Fluorescence</option>
+                                    <option value="nmr">NMR Spectrum</option>
+                                    <option value="mass">Mass Spectrometry</option>
+                                </select>
+                            </label>
+
+                            <label style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                                <span>Min Resolution:</span>
+                                <select id="select-pref-res" style="padding: 4px 8px; border-radius: 6px; background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color); font-size: 0.8rem;">
+                                    <option value="1000">HD / High Res (>1000px)</option>
+                                    <option value="700" selected>Medium (>700px)</option>
+                                    <option value="400">Any Resolution</option>
+                                </select>
+                            </label>
+
+                            <label style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                                <span>Download Limit:</span>
+                                <select id="select-pref-limit" style="padding: 4px 8px; border-radius: 6px; background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color); font-size: 0.8rem;">
+                                    <option value="5" selected>5 Images (Credit Saver)</option>
+                                    <option value="10">10 Images</option>
+                                    <option value="20">20 Images</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <!-- GOOGLE LENS PANEL -->
+                        <div class="google-lens-panel hidden" id="google-lens-panel">
+                            <div class="lens-header">
+                                <div class="lens-title">
+                                    <svg viewBox="0 0 24 24" width="20" height="20">
+                                        <path fill="#4285F4" d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
+                                        <path fill="#34A853" d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                                    </svg>
+                                    <span>Google Lens — Visual Spectrum Matcher</span>
+                                </div>
+                                <button type="button" class="lens-close-btn" id="btn-close-lens">✕</button>
+                            </div>
+                            <div class="lens-drop-zone" id="lens-drop-zone">
+                                <div class="lens-drop-icon">📷</div>
+                                <p>Drag any spectrum graph image here, or <strong class="lens-browse-text" id="lens-browse-text">browse from computer</strong></p>
+                                <input type="file" id="lens-file-input" accept="image/*,application/pdf" class="hidden">
+                            </div>
+                            <div class="lens-url-row">
+                                <input type="text" id="lens-url-input" placeholder="Or paste image URL (e.g. https://.../spectrum.png)...">
+                                <button type="button" class="blue-btn" id="btn-lens-load-url">Search URL</button>
+                            </div>
+                        </div>
+                        
+                        <div class="search-results-gallery-container" style="margin-top: 15px;">
+                            <div class="gallery-selection-header hidden" id="gallery-selection-header">
+                                <span id="gallery-selection-count">0 items selected</span>
+                                <button id="btn-download-selected" class="green-btn" style="width: auto;">📥 Import Selected to Dataset</button>
+                            </div>
+                            
+                            <div class="search-placeholder" id="search-gallery-placeholder">
+                                Enter a chemical name above and click search to crawl matching spectrum images.
+                            </div>
+                            
+                            <div class="search-results-grid hidden" id="search-results-grid">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SEMI-MANUAL UPLOAD VIEW -->
+                    <div class="dashboard-card hidden" id="import-manual-container" style="min-height: auto;">
+                        <h3>📂 Upload Spectrum Files</h3>
+                        <div class="upload-area" id="drop-zone">
+                            <p>Drag and drop multiple graph images/PDFs here or click to select files</p>
+                            <input type="file" id="file-input" multiple accept="image/*,application/pdf" class="hidden">
+                        </div>
+                        
+                        <div id="demo-load-wrapper" style="margin-top: 15px; text-align: center;">
+                            <button id="btn-load-demo" class="secondary-btn" style="width: auto; padding: 10px 20px;">💡 Load Demo Spectrum Image</button>
+                        </div>
+                    </div>
+
+                    <!-- WIZARD STEP 2 FOOTER NAV -->
+                    <div class="wizard-footer-nav" style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+                        <button class="secondary-btn wizard-back-btn" id="btn-step2-back" style="width: auto;">⬅️ Back to Modes</button>
+                        <button class="green-btn wizard-next-btn" id="btn-step2-next" disabled style="width: auto; padding: 10px 25px;">Proceed to Pre-processing ➡️</button>
+                    </div>
+                </div>
+                
+                <!-- STEP 3: WORKSPACE PANEL -->
+                <div id="tab-workspace" class="tab-panel">
+                    <div class="split-layout three-column">
+                        <!-- COLUMN 1: IMAGE PRE-PROCESSING -->
+                        <div class="dashboard-card">
+                            <h3>1. Image Pre-Processing</h3>
+                            <div class="form-group">
+                                <label>Brightness: <span id="val-brightness">0</span></label>
+                                <input type="range" id="slider-brightness" min="-100" max="100" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Contrast: <span id="val-contrast">1.0</span></label>
+                                <input type="range" id="slider-contrast" min="0.5" max="3.0" step="0.1" value="1.0">
+                            </div>
+                            <div class="form-group">
+                                <label>Denoise (Median Filter): <span id="val-median">Off</span></label>
+                                <input type="range" id="slider-median" min="1" max="9" step="2" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Gaussian Blur: <span id="val-blur">0</span>px</label>
+                                <input type="range" id="slider-blur" min="0" max="10" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Thicken Curves (Erode): <span id="val-erode">0</span>px</label>
+                                <input type="range" id="slider-erode" min="0" max="5" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Thicken Background (Dilate): <span id="val-dilate">0</span>px</label>
+                                <input type="range" id="slider-dilate" min="0" max="5" value="0">
+                            </div>
+                            <button id="btn-reset-filters" class="secondary-btn" style="margin-top: 10px;">🔄 Reset Filters</button>
+                            
+                            <!-- Image Quality Score Panel -->
+                            <div class="quality-card" id="quality-card" style="margin-top: 20px; display: none;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-color);">🧠 AI SIQA Quality Score</h4>
+                                        <span id="siqa-decision-badge" class="siqa-badge" style="display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">Status: -</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span id="badge-overall-score" style="background: #10B981; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.9rem; font-weight: 700;">Score: -</span>
+                                    </div>
+                                </div>
+
+                                <!-- 8 SIQA Parameter Breakdown -->
+                                <div class="siqa-metrics-grid" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>🔍 Blur Score (B)</span><strong id="siqa-score-blur">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-blur" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>📐 Resolution Score (R)</span><strong id="siqa-score-res">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-res" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>📡 Noise Level / SNR (N)</span><strong id="siqa-score-noise">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-noise" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>☯️ Contrast (C)</span><strong id="siqa-score-contrast">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-contrast" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>💡 Lighting / Mean Int. (L)</span><strong id="siqa-score-lighting">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-lighting" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>📐 Axis Detection (A)</span><strong id="siqa-score-axis">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-axis" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>📝 OCR Confidence (O)</span><strong id="siqa-score-ocr">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-ocr" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                    <div class="siqa-item">
+                                        <div class="siqa-item-header" style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;"><span>📊 Graph Completeness (G)</span><strong id="siqa-score-graph">-</strong></div>
+                                        <div class="siqa-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;"><div id="siqa-bar-graph" class="siqa-fill" style="width: 0%; height: 100%; background: #10B981; transition: width 0.4s;"></div></div>
+                                    </div>
+                                </div>
+
+                                <!-- Rejection Alert Banner (Hidden by default unless score < 60) -->
+                                <div id="siqa-rejection-banner" style="display: none; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; border-radius: 8px; margin-bottom: 12px;">
+                                    <strong style="color: #EF4444; font-size: 0.85rem; display: block; margin-bottom: 4px;">🛑 Image Quality Rejected (Score < 60)</strong>
+                                    <p style="font-size: 0.8rem; color: var(--text-color); margin: 0 0 8px 0; line-height: 1.3;">
+                                        Quality is too low for reliable digitization. Please upload a clearer, higher-resolution spectrum image.
+                                    </p>
+                                    <button id="btn-siqa-override" class="small-btn" style="background: #F59E0B; color: black; font-weight: 600; width: 100%; cursor: pointer;">⚠️ Override & Force Digitization</button>
+                                </div>
+
+                                <div class="recommendations-box" id="quality-recommendations-box" style="margin-top: 8px; padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; border-left: 3px solid #3B82F6;">
+                                    <strong style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 4px;">💡 SIQA Recommendations:</strong>
+                                    <ul id="list-quality-recommendations" style="padding-left: 14px; margin: 0; font-size: 0.8rem; line-height: 1.25;">
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- COLUMN 2: INPUT CANVAS -->
+                        <div class="dashboard-card">
+                            <h3>2. Workspace & Calibration Canvas</h3>
+                            
+                            <!-- Visual Image Dataset Manager -->
+                            <div class="dataset-manager hidden" id="dataset-manager">
+                                <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px;">📋 Image Dataset Manager (<span id="dataset-count">0</span>)</h4>
+                                <div class="dataset-thumbnails" id="dataset-thumbnails">
+                                    <!-- Rendered dynamically in JS -->
+                                </div>
+                                <button id="btn-batch-process" class="green-btn hidden" style="margin-top: 10px; width: 100%;">⚡ Batch Process Selected Images</button>
+                            </div>
+                            
+                            <!-- Preview Stage Selector -->
+                            <div class="preview-stage-selector" id="preview-stage-selector" style="display: none; margin-bottom: 12px; gap: 8px; justify-content: flex-start; align-items: center;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500; margin-right: 4px;">View Stage:</span>
+                                <button class="small-btn active" id="btn-view-enhanced" style="padding: 3px 8px; font-size: 0.8rem;">✨ Enhanced</button>
+                                <button class="small-btn" id="btn-view-original" style="padding: 3px 8px; font-size: 0.8rem;">📷 Original</button>
+                            </div>
+                            
+                            <div id="canvas-container" class="canvas-container hidden">
+                                <div class="calibration-guidance" id="calibration-guidance"></div>
+                                <div class="canvas-wrapper">
+                                    <canvas id="src-canvas"></canvas>
+                                    <canvas id="scribble-canvas"></canvas>
+                                </div>
+                                
+                                <div class="scribble-controls">
+                                    <label><input type="checkbox" id="chk-enable-scribble"> 🎨 Enable Scribble Masking (Erase region)</label>
+                                    <div id="brush-size-control" class="hidden inline-control">
+                                        <label>Brush Size: <span id="val-brush">10</span>px</label>
+                                        <input type="range" id="slider-brush" min="2" max="40" value="10">
+                                        <button id="btn-clear-scribbles" class="small-btn">Clear Scribbles</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="processed-mask-container hidden" id="processed-mask-container">
+                                <h3>Processed Image (Threshold Mask)</h3>
+                                <canvas id="mask-canvas"></canvas>
+                                <span class="caption">Active Threshold Mask (Live Preview)</span>
+                            </div>
+                        </div>
+                        
+                        <!-- COLUMN 3: DIGITIZED PREVIEW -->
+                        <div class="dashboard-card">
+                            <h3>3. Digitized Preview</h3>
+                            <div id="plotly-preview-chart" class="plotly-chart"></div>
+                            <div id="preview-placeholder" class="chart-placeholder">
+                                Trace axis boundaries first, then click 'Extract Curves' to see the digitized preview.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WIZARD STEP 3 FOOTER NAV -->
+                    <div class="wizard-footer-nav" style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; width: 100%;">
+                        <button class="secondary-btn wizard-back-btn" id="btn-step3-back" style="width: auto;">⬅️ Back to Import</button>
+                        <button class="blue-btn wizard-next-btn" id="btn-step3-next" style="width: auto; padding: 10px 25px;">Proceed to Results Collection ➡️</button>
+                    </div>
+                </div>
+                
+                <!-- STEP 4: RESULTS PANEL -->
+                <div id="tab-results" class="tab-panel">
+                    <div class="split-layout">
+                        <!-- LEFT COLUMN: INDIVIDUAL & AVERAGE GRAPH RENDERERS -->
+                        <div class="dashboard-card">
+                            <h3>📊 Collected & Average Spectra Plots</h3>
+                            <div class="plot-options" style="margin-bottom: 12px;">
+                                <label><input type="checkbox" id="chk-normalize-y" checked> Normalize Y (Scale to [0.0, 1.0])</label>
+                                <label><input type="checkbox" id="chk-equalize-x" checked> Equalize Wavelengths Range</label>
+                            </div>
+                            
+                            <div class="results-charts-container" style="display: flex; flex-direction: column; gap: 20px;">
+                                <div>
+                                    <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;">📈 Individual Collected Spectra</h4>
+                                    <div id="plotly-collected-chart" class="plotly-chart" style="min-height: 350px;"></div>
+                                </div>
+                                <div style="border-top: 1px solid var(--border-color); padding-top: 15px;">
+                                    <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;">🎯 Consensus Average Spectrum</h4>
+                                    <div id="plotly-average-chart" class="plotly-chart" style="min-height: 350px;"></div>
+                                </div>
+                            </div>
+                            
+                            <div id="collected-table-container" style="margin-top: 15px;">
+                                <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;">📋 Collected Curves Summary</h4>
+                                <table class="data-table" id="table-summaries">
+                                    <thead>
+                                        <tr>
+                                            <th>Curve Name</th>
+                                            <th>Data Points</th>
+                                            <th>Peak Wavelength (nm)</th>
+                                            <th>Max Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="4" class="text-center text-muted" style="text-align: center; padding: 20px; color: var(--text-muted);">Save digitized curves first to see summaries.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT COLUMN: SIMILARITY CONTROLS & STATISTICS -->
+                        <div class="dashboard-card">
+                            <h3>🔍 Shape Similarity & Consensus Filtering</h3>
+                            
+                            <div class="metrics-row" style="margin-bottom: 15px;">
+                                <div class="metric-card">
+                                    <span>Average Peak Wavelength</span>
+                                    <strong id="metric-avg-peak-x">-</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span>Average Peak Value</span>
+                                    <strong id="metric-avg-peak-y">-</strong>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group similarity-slider-group" style="background: rgba(255, 255, 255, 0.02); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+                                <label for="slider-similarity-threshold">Outlier Rejection Threshold: <strong id="val-similarity-threshold">95%</strong></label>
+                                <input type="range" id="slider-similarity-threshold" min="50" max="100" step="1" value="95" style="width: 100%; margin: 8px 0;">
+                                <span class="range-hint">Curves below this Pearson correlation percentage are marked as outlier curves.</span>
+                                <label style="margin-top: 10px; display: block; font-size: 0.85rem; cursor: pointer; color: var(--text-main);">
+                                    <input type="checkbox" id="chk-show-rejected-plot" style="margin-right: 6px;"> Show Outlier Curves in average plot
+                                </label>
+                            </div>
+                            
+                            <div class="medoid-info-card" style="padding: 10px; background: rgba(59, 130, 246, 0.08); border-radius: 6px; border-left: 3px solid #3B82F6; margin-top: 10px;">
+                                <strong>Consensus Reference:</strong>
+                                <span id="val-consensus-ref" class="code-font" style="display: block; font-family: monospace; font-size: 0.85rem; margin-top: 4px; color: #60A5FA;">-</span>
+                            </div>
+
+                            <div class="stats-summary-card" style="display: flex; gap: 8px; margin-top: 12px;">
+                                <div class="stat-badge" style="flex: 1; padding: 6px; background: var(--button-bg); border-radius: 6px; text-align: center; border: 1px solid var(--border-color);">
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Total Curves</span>
+                                    <strong id="stat-total-curves" style="font-size: 1.1rem; display: block; margin-top: 2px;">0</strong>
+                                </div>
+                                <div class="stat-badge" style="flex: 1; padding: 6px; background: rgba(16, 185, 129, 0.1); border-radius: 6px; text-align: center; border: 1px solid rgba(16, 185, 129, 0.2);">
+                                    <span style="font-size: 0.75rem; color: #10B981; display: block;">Accepted</span>
+                                    <strong id="stat-accepted-curves" style="font-size: 1.1rem; display: block; margin-top: 2px; color: #10B981;">0</strong>
+                                </div>
+                                <div class="stat-badge" style="flex: 1; padding: 6px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2);">
+                                    <span style="font-size: 0.75rem; color: #EF4444; display: block;">Outliers</span>
+                                    <strong id="stat-rejected-curves" style="font-size: 1.1rem; display: block; margin-top: 2px; color: #EF4444;">0</strong>
+                                </div>
+                            </div>
+                            
+                            <div class="results-actions-card" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+                                <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 4px;">📥 Export & Downloads</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <button id="btn-download-collected-csv" class="green-btn" style="padding: 6px 12px; font-size: 0.85rem; text-align: center;">Consolidated CSV 📄</button>
+                                    <button id="btn-download-collected-json" class="blue-btn" style="padding: 6px 12px; font-size: 0.85rem; text-align: center;">Collected JSON 📝</button>
+                                </div>
+                                <button id="btn-download-average-csv" class="green-btn" style="width: 100%; font-size: 0.85rem;">📄 Download Average Spectrum CSV</button>
+                                <button id="btn-download-full-report" class="blue-btn" style="width: 100%; font-size: 0.85rem;">📝 Download Detailed Analysis Report</button>
+                                <button id="btn-clear-collected" class="red-btn" style="width: 100%; font-size: 0.85rem;">Clear Dataset Collection 🗑️</button>
+                            </div>
+
+                            <div id="similarity-table-container" style="margin-top: 15px; overflow-x: auto;">
+                                <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;">📊 Pearson Outlier Classification</h4>
+                                <table class="data-table" id="table-similarity">
+                                    <thead>
+                                        <tr>
+                                            <th>Spectrum Curve</th>
+                                            <th>Similarity</th>
+                                            <th>Status</th>
+                                            <th>Method</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="5" class="text-center text-muted" style="text-align: center; padding: 20px; color: var(--text-muted);">Collect curves to calculate Pearson shape match.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WIZARD STEP 4 FOOTER NAV -->
+                    <div class="wizard-footer-nav" style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; width: 100%;">
+                        <button class="secondary-btn wizard-back-btn" id="btn-step4-back" style="width: auto;">⬅️ Back to Workspace</button>
+                        <button class="red-btn" id="btn-step4-reset" style="width: auto; padding: 10px 25px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5;">🔄 Start New Chemical</button>
+                    </div>
+                </div>
+                
+                <!-- SETTINGS PANEL -->
+                <div id="tab-settings" class="tab-panel">
+                    <div class="dashboard-card" style="max-width: 600px; margin: 0 auto; min-height: auto;">
+                        <h3>⚙️ Extraction & Export Settings</h3>
+                        
+                        <div class="settings-group" style="margin-bottom: 15px;">
+                            <h4 style="font-size: 0.95rem; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px;">📊 Processing Options</h4>
+                            <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="setting-auto-upscale" checked style="width: auto;">
+                                <label for="setting-auto-upscale" style="cursor: pointer;">Enable Auto Upscale on low-resolution images</label>
+                            </div>
+                            <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="setting-skew-correct" checked style="width: auto;">
+                                <label for="setting-skew-correct" style="cursor: pointer;">Enable Auto Skew-Angle Correction</label>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-group" style="margin-bottom: 15px;">
+                            <h4 style="font-size: 0.95rem; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px;">📁 Export Formats Defaults</h4>
+                            <div class="form-group">
+                                <label for="setting-export-csv-format">Wavelength Floating Precision:</label>
+                                <select id="setting-export-csv-format">
+                                    <option value="4" selected>4 decimals (e.g. 500.1234)</option>
+                                    <option value="2">2 decimals (e.g. 500.12)</option>
+                                    <option value="6">6 decimals (e.g. 500.123456)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <h4 style="font-size: 0.95rem; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px;">💡 Modular Search Philosophy</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+                                This platform uses a keyless <strong>Bing Images search scraper</strong> for automatic chemical spectrum retrieval. Under the guidance of our IIT Madras mentor, the Search Module is completely decoupled from the digitization engine, making it trivial to plug in other sources (like Brave Search, SerpAPI, or offline PDF indexers) by editing only the search routes in <code>server.js</code>.
+                            </p>
+                        </div>
+
+                        <button class="blue-btn return-wizard-btn" id="btn-settings-return" style="margin-top: 20px; width: 100%;">🔙 Return to Digitizing Flow</button>
+                    </div>
+                </div>
+
+                <!-- LOGS PANEL -->
+                <div id="tab-logs" class="tab-panel">
+                    <div class="dashboard-card">
+                        <h3>System Processing Logs</h3>
+                        <pre class="logs-console" id="logs-console"></pre>
+                    </div>
+                </div>
+                
+            </div>
+        </main>
+    </div>
+    
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">Processing image data...</p>
+    </div>
+    
+    <script defer src="opencv_digitizer.js"></script>
+    <script defer src="ai_engine.js"></script>
+    <script defer src="script.js"></script>
+</body>
+</html>
