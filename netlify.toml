@@ -3,6 +3,7 @@
   publish = "public"
 
 [functions]
+  node_bundler = "esbuild"
   included_files = ["eng.traineddata", "eng.traineddata.gz"]
   external_node_modules = [
     "@tensorflow/tfjs",
