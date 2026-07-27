@@ -2218,7 +2218,8 @@ app.post('/api/download-images', async (req, res) => {
   }
 
   const downloaded = [];
-  const uploadsDir = path.join(__dirname, 'uploads');
+  const os = require('os');
+  const uploadsDir = path.join(os.tmpdir(), 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
@@ -2259,6 +2260,10 @@ app.post('/api/download-images', async (req, res) => {
   res.json({ success: true, count: downloaded.length, images: downloaded });
 });
 
-app.listen(PORT, () =>
-  console.log(`Spectral AI System running at http://localhost:${PORT}`)
-);
+if (!process.env.NETLIFY) {
+  app.listen(PORT, () =>
+    console.log(`Spectral AI System running at http://localhost:${PORT}`)
+  );
+}
+
+module.exports = app;
