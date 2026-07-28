@@ -21,10 +21,19 @@ app.post('/api/digitize', upload, async (req, res) => {
 
     const img     = await Jimp.read(req.files[0].buffer);
     await preprocessImage(img);
-    let vertices  = JSON.parse(req.body.vertices || '[]');
-    const xRange  = JSON.parse(req.body.xRange   || '[300,1000]');
-    const yRange  = JSON.parse(req.body.yRange   || '[0,1]');
-    const configs = JSON.parse(req.body.configs  || '{}');
+    const parseSafe = (val, fallback) => {
+      if (!val || val === 'undefined') return fallback;
+      try {
+        return JSON.parse(val);
+      } catch (e) {
+        return fallback;
+      }
+    };
+
+    let vertices  = parseSafe(req.body.vertices, []);
+    const xRange  = parseSafe(req.body.xRange,   [300, 1000]);
+    const yRange  = parseSafe(req.body.yRange,   [0, 1]);
+    const configs = parseSafe(req.body.configs,  {});
 
     if (!vertices || vertices.length < 3) {
       return res.status(422).json({
