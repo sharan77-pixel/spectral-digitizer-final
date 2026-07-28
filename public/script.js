@@ -793,6 +793,33 @@ async function triggerAutoCalibration(fileObj) {
         xLabel = result.xLabel || 'Wavelength (nm)';
         yLabel = result.yLabel || 'Absorbance';
 
+        let isOcrRunNeeded = (xRange[0] === 300 && xRange[1] === 1000 && yRange[0] === 0.0 && yRange[1] === 1.0);
+        if (isOcrRunNeeded) {
+            addLog('[AI Engine] Server returned default ranges. Running client-side browser OCR to scan axis limits...');
+            try {
+                const localCanvas = document.createElement('canvas');
+                localCanvas.width = activeImageObj.width;
+                localCanvas.height = activeImageObj.height;
+                const localCtx = localCanvas.getContext('2d');
+                localCtx.drawImage(activeImageObj, 0, 0);
+
+                const clientRes = await cvReadAxisLimits(localCanvas, rawAutoVertices);
+                xRange = clientRes.xRange;
+                yRange = clientRes.yRange;
+                xLabel = clientRes.xLabel || xLabel;
+                yLabel = clientRes.yLabel || yLabel;
+                if (clientRes.xScaleType) {
+                    result.xScaleType = clientRes.xScaleType;
+                }
+                if (clientRes.yScaleType) {
+                    result.yScaleType = clientRes.yScaleType;
+                }
+                addLog('[Local OCR] Calibration limits updated: X=' + xRange[0] + '-' + xRange[1] + ', Y=' + yRange[0] + '-' + yRange[1]);
+            } catch (ocrErr) {
+                addLog('[Local OCR] Client-side OCR failed: ' + ocrErr.message);
+            }
+        }
+
         document.getElementById('input-x-min').value = xRange[0];
         document.getElementById('input-x-max').value = xRange[1];
         document.getElementById('input-y-min').value = yRange[0];

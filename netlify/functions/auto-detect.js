@@ -5,7 +5,6 @@ const Jimp = require('jimp');
 const serverless = require('serverless-http');
 
 const { preprocessImage, detectPlotVertices, assessQuality } = require('./helpers/image-utils');
-const { recognizeAxesLimits } = require('./helpers/ocr-utils');
 const { adaptiveThresholdBradley, morphClosing, morphOpening } = require('./helpers/threshold');
 
 const app = express();
@@ -26,7 +25,7 @@ app.post('/api/auto-detect', upload, async (req, res) => {
     const preprocessInfo = await preprocessImage(enhancedImg);
     
     const vertices = detectPlotVertices(enhancedImg.bitmap);
-    const ranges = await recognizeAxesLimits(enhancedImg, vertices);
+    const ranges = { xRange: [300, 1000], yRange: [0.0, 1.0], xScaleType: 'linear', yScaleType: 'linear', xLabel: 'Wavelength (nm)', yLabel: 'Absorbance' };
 
     const quality = assessQuality(img.bitmap, vertices, ranges);
 
