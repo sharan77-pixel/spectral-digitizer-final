@@ -13,8 +13,33 @@
   ]
 
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  from = "/api/auto-detect"
+  to = "/.netlify/functions/auto-detect"
+  status = 200
+
+[[redirects]]
+  from = "/api/digitize"
+  to = "/.netlify/functions/digitize"
+  status = 200
+
+[[redirects]]
+  from = "/api/search-images"
+  to = "/.netlify/functions/search-images"
+  status = 200
+
+[[redirects]]
+  from = "/api/extension-import"
+  to = "/.netlify/functions/extension-import"
+  status = 200
+
+[[redirects]]
+  from = "/api/proxy-image"
+  to = "/.netlify/functions/proxy-image"
+  status = 200
+
+[[redirects]]
+  from = "/api/download-images"
+  to = "/.netlify/functions/download-images"
   status = 200
 
 [[redirects]]
