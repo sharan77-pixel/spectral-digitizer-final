@@ -783,9 +783,13 @@ async function triggerAutoCalibration(fileObj) {
             addLog('[Local AI Engine] Calibration complete: ' + clientRes.log.join(', '));
         }
 
-        rawAutoVertices = result.vertices;
-        xRange = result.xRange;
-        yRange = result.yRange;
+        rawAutoVertices = (result.vertices && result.vertices.length >= 3) ? result.vertices : [
+            { x: Math.floor(activeImageObj.width * 0.12), y: Math.floor(activeImageObj.height * 0.82) },
+            { x: Math.floor(activeImageObj.width * 0.93), y: Math.floor(activeImageObj.height * 0.82) },
+            { x: Math.floor(activeImageObj.width * 0.12), y: Math.floor(activeImageObj.height * 0.08) }
+        ];
+        xRange = (result.xRange && result.xRange.length >= 2) ? result.xRange : [300, 1000];
+        yRange = (result.yRange && result.yRange.length >= 2) ? result.yRange : [0.0, 1.0];
         xLabel = result.xLabel || 'Wavelength (nm)';
         yLabel = result.yLabel || 'Absorbance';
 
@@ -871,7 +875,8 @@ async function triggerAutoCalibration(fileObj) {
             }
         }
         document.getElementById('preview-stage-selector').style.display = 'flex';
-        if (enhancedSrcUrl) {
+        const isNewSrc = (enhancedSrcUrl && enhancedSrcUrl !== activeImageObj.src && !enhancedSrcUrl.includes('undefined'));
+        if (isNewSrc) {
             isPreprocessingChange = true;
             activeImageObj.src = enhancedSrcUrl;
         } else {
@@ -882,6 +887,7 @@ async function triggerAutoCalibration(fileObj) {
                 }));
                 rawAutoVertices = null;
             }
+            renderLiveMask();
             drawCalibrationPoints();
         }
     } catch (err) {
