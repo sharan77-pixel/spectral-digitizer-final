@@ -50,7 +50,9 @@ app.post('/api/digitize', upload, async (req, res) => {
   }
 });
 
-const handler = serverless(app);
+const handler = serverless(app, {
+  binary: ['image/*', 'multipart/form-data']
+});
 module.exports.handler = async (event, context) => {
   if (event.path && event.path.startsWith('/.netlify/functions/digitize')) {
     event.path = event.path.replace('/.netlify/functions/digitize', '/api/digitize');

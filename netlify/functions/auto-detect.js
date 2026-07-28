@@ -56,7 +56,9 @@ app.post('/api/auto-detect', upload, async (req, res) => {
   }
 });
 
-const handler = serverless(app);
+const handler = serverless(app, {
+  binary: ['image/*', 'multipart/form-data']
+});
 module.exports.handler = async (event, context) => {
   if (event.path && event.path.startsWith('/.netlify/functions/auto-detect')) {
     event.path = event.path.replace('/.netlify/functions/auto-detect', '/api/auto-detect');

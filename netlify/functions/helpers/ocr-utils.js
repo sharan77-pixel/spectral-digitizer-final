@@ -1,5 +1,6 @@
 const Jimp = require('jimp');
 const path = require('path');
+const fs = require('fs');
 const { getPixel } = require('./image-utils');
 const { adaptiveThresholdBradley } = require('./threshold');
 
@@ -443,13 +444,19 @@ async function recognizeAxesLimits(jimpImg, vertices) {
     }
 
     const buf = await clone.getBufferAsync(Jimp.MIME_PNG);
-    // Tesseract lang files will be bundled by Netlify and accessible relative to functions
-    const relativeLangPath = path.relative(process.cwd(), __dirname) || '.';
-    const r = await Tesseract.recognize(buf, 'eng', {
-      langPath: relativeLangPath,
+    const options = {
       logger: () => {},
       tessedit_char_whitelist: '0123456789.eE+-^logLOG*xX()⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'
-    });
+    };
+    
+    // Check if training data exists in __dirname or process.cwd(), otherwise fall back to CDN
+    if (fs.existsSync(path.join(__dirname, 'eng.traineddata'))) {
+      options.langPath = __dirname;
+    } else if (fs.existsSync(path.join(process.cwd(), 'eng.traineddata'))) {
+      options.langPath = process.cwd();
+    }
+    
+    const r = await Tesseract.recognize(buf, 'eng', options);
     return r;
   }
 
